@@ -1,7 +1,12 @@
 package com.eneyeitech;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 
 
@@ -13,8 +18,11 @@ public class Main {
     public static Scanner scanner = new Scanner(System.in);
     static boolean exit;
     static BudgetManager budgetManager = new BudgetManager();
+    static FileManager fileManager = new FileManager();
 
     public static void main(String[] args) {
+        java.util.Locale.setDefault(Locale.US);
+        //System.out.println(fileManager.getFile());
         while (!exit) {
             menu();
             chooseAction();
@@ -27,6 +35,8 @@ public class Main {
                 "2) Add purchase\n" +
                 "3) Show list of purchases\n" +
                 "4) Balance\n" +
+                "5) Save\n" +
+                "6) Load\n" +
                 "0) Exit");
     }
 
@@ -45,6 +55,12 @@ public class Main {
                 break;
             case 4:
                 budgetManager.showBalance();
+                break;
+            case 5:
+                fileManager.saveFile(budgetManager);
+                break;
+            case 6:
+                fileManager.loadFile(budgetManager);
                 break;
             case 0:
                 exit();
@@ -88,6 +104,7 @@ public class Main {
                 int itype = Integer.parseInt(type);
 
                 budgetManager.addItem(item, dprice, itype);
+                System.out.println("Purchase was added!");
             } catch (Exception e) {
                 System.out.println();
                 break;
@@ -191,11 +208,13 @@ class BudgetManager {
         System.out.println("Income was added!\n");
     }
 
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
     public void addItem(String item, double price, int type) {
         this.itemsList.add(new Item(item, price, type));
-        this.balance = Math.max(this.balance - price, 0.0f);
         this.total += price;
-        System.out.println("Purchase was added!");
     }
 
     public void showPurchaseList(String category) {
@@ -227,7 +246,7 @@ class BudgetManager {
         System.out.println("All:");
         if (this.itemsList.size() > 0) {
             for (Item item : itemsList) {
-                System.out.printf("%s (%s) $%.2f\n", item.getName(), item.getCategory().toString(), item.getPrice());
+                System.out.printf("%s $%.2f\n", item.getName(), item.getPrice());
             }
             System.out.printf("Total sum: $%.2f\n", this.total);
         } else {
@@ -236,6 +255,84 @@ class BudgetManager {
     }
 
     public void showBalance() {
-        System.out.printf("\nBalance: $%.2f\n\n", this.balance);
+        System.out.printf("\nBalance: $%.2f\n\n", this.balance - this.total);
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public ArrayList<Item> getItemsList() {
+        return itemsList;
+    }
+}
+
+class FileManager {
+    File file = new File("purchases.txt");
+
+    public FileManager() {
+        super();
+        try {
+            this.file.createNewFile();
+        } catch (IOException e) {
+            System.out.println("Cannot create the file: " + this.file.getPath());
+        }
+    }
+
+    public File getFile() {
+        return file;
+    }
+
+    public void saveFile(BudgetManager budgetManager) {
+        Double balance = budgetManager.getBalance();
+
+        ArrayList<Item> items = budgetManager.getItemsList();
+        try (PrintWriter printWriter = new PrintWriter(file)) {
+            printWriter.printf("Balance:%.2f\n", balance);
+            for (Item item : items){
+                int category = convertCategory(item.getCategory().toString());
+                printWriter.printf("%s,%s,%.2f\n", category, item.getName(), item.getPrice());
+            }
+        } catch (IOException e) {
+            System.out.printf("An exception occurs %s", e.getMessage());
+        }
+
+        System.out.println("\nPurchases were saved!\n");
+    }
+
+    public void loadFile(BudgetManager budgetManager) {
+        try (Scanner scanner = new Scanner(file)) {
+            String balance = scanner.nextLine();
+            if (balance.contains("Balance")) {
+                budgetManager.setBalance(Double.parseDouble(balance.split(":")[1]));
+            }
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                String[] arr = line.split(",");
+                int type = Integer.parseInt(arr[0]);
+                String item = arr[1];
+                Double price = Double.parseDouble(arr[2]);
+
+                budgetManager.addItem(item, price, type);
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("No file found: " + this.file);
+        }
+
+        System.out.println("\nPurchases were loaded!\n");
+    }
+
+    private int convertCategory(String c){
+        switch(c){
+            case "FOOD":
+                return 1;
+            case "CLOTHES":
+                return 2;
+            case "ENTERTAINMENT":
+                return 3;
+            case "OTHER":
+                return 4;
+        }
+        return 0;
     }
 }
