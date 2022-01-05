@@ -4,10 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Scanner;
+import java.util.*;
 
 
 enum PurchaseCategory {
@@ -37,6 +34,7 @@ public class Main {
                 "4) Balance\n" +
                 "5) Save\n" +
                 "6) Load\n" +
+                "7) Analyze (Sort)\n" +
                 "0) Exit");
     }
 
@@ -61,6 +59,9 @@ public class Main {
                 break;
             case 6:
                 fileManager.loadFile(budgetManager);
+                break;
+            case 7:
+                chooseSort();
                 break;
             case 0:
                 exit();
@@ -90,7 +91,7 @@ public class Main {
 
             type = scanner.nextLine();
             System.out.println();
-            if (Integer.parseInt(type) >= 5 ){
+            if (Integer.parseInt(type) >= 5) {
                 System.out.println();
                 break;
             }
@@ -142,6 +143,41 @@ public class Main {
                         break;
                     case 5:
                         budgetManager.showPurchaseList();
+                        break;
+                }
+            }
+        }
+    }
+
+    private static void chooseSort() {
+        while (true) {
+            System.out.println("\nHow do you want to sort?\n" +
+                    "1) Sort all purchases\n" +
+                    "2) Sort by type\n" +
+                    "3) Sort certain type\n" +
+                    "4) Back");
+            int method = Integer.parseInt(scanner.nextLine());
+            if (method == 4 || method < 1 || method > 4) {
+                System.out.println();
+                return;
+            } else {
+                System.out.println();
+                switch (method) {
+                    case 1:
+                        budgetManager.sortAllPurchases();
+                        break;
+                    case 2:
+                        budgetManager.SortAllTypes();
+                        break;
+                    case 3:
+                        System.out.println("\nChoose the type of purchase\n" +
+                                "1) Food\n" +
+                                "2) Clothes\n" +
+                                "3) Entertainment\n" +
+                                "4) Other");
+                        int type = Integer.parseInt(scanner.nextLine());
+                        budgetManager.sortType(type);
+                        break;
                 }
             }
         }
@@ -237,20 +273,20 @@ class BudgetManager {
                 System.out.printf("Total sum: $%.2f\n", catTotal);
             }
         } else {
-            System.out.println("Purchase list is empty");
+            System.out.println("Purchase list is empty!");
         }
     }
 
     public void showPurchaseList() {
         System.out.println();
-        System.out.println("All:");
         if (this.itemsList.size() > 0) {
+            System.out.println("All:");
             for (Item item : itemsList) {
                 System.out.printf("%s $%.2f\n", item.getName(), item.getPrice());
             }
             System.out.printf("Total sum: $%.2f\n", this.total);
         } else {
-            System.out.println("Purchase list is empty\n");
+            System.out.println("Purchase list is empty!\n");
         }
     }
 
@@ -264,6 +300,99 @@ class BudgetManager {
 
     public ArrayList<Item> getItemsList() {
         return itemsList;
+    }
+
+    public void sortAllPurchases() {
+        if (this.itemsList.size() < 0) {
+            System.out.println("Purchase list is empty!");
+        } else {
+            itemsList.sort(new PriceSorter());
+            showPurchaseList();
+        }
+    }
+
+    public void SortAllTypes() {
+        itemsList.sort(new TypeSorter());
+        double sum = 0.00;
+        String[] types = {"Food", "Entertainment", "Clothes", "Other"};
+        for (String type : types) {
+            sum = 0.00;
+            ArrayList<Item> categoryList = new ArrayList<Item>();
+            for (Item item : itemsList) {
+                if (item.getCategory() == PurchaseCategory.valueOf(type.toUpperCase()))
+                    categoryList.add(item);
+            }
+            if (categoryList.size() > 0) {
+                for (Item item : categoryList) {
+                    sum += item.getPrice();
+                }
+            }
+            if (sum == 0.00){
+                System.out.printf("%s - $0\n", type);
+            } else {
+                System.out.printf("%s - $%.2f\n", type, sum);
+            }
+        } if (sum == 0.00) {
+            System.out.println("Total sum: $0\n");
+        } else {
+            System.out.printf("Total sum: $%.2f\n", this.total);
+        }
+    }
+
+
+    public void sortType(int type) {
+        if (this.itemsList.size() == 0) {
+            System.out.println("\nPurchase list is empty!\n");
+        } else {
+
+            String category = convertCategory(type);
+            double sum = 0.00;
+            ArrayList<Item> categoryList = new ArrayList<Item>();
+            for (Item item : itemsList) {
+                if (item.getCategory() == PurchaseCategory.valueOf(category.toUpperCase()))
+                    categoryList.add(item);
+            }
+            System.out.println();
+            if (categoryList.size() > 0) {
+                categoryList.sort(new PriceSorter());
+                for (Item item : categoryList) {
+                    System.out.printf("%s $%.2f\n", item.getName(), item.getPrice());
+                    sum += item.getPrice();
+                }
+                System.out.printf("Total sum: $%.2f\n", sum);
+            } else {
+                System.out.println("\nPurchase list is empty!\n");
+            }
+        }
+    }
+
+    private String convertCategory(int i) {
+        switch (i) {
+            case 1:
+                return "FOOD";
+            case 2:
+                return "CLOTHES";
+            case 3:
+                return "ENTERTAINMENT";
+            case 4:
+                return "OTHER";
+        }
+        return "";
+    }
+
+}
+
+class PriceSorter implements Comparator<Item> {
+    @Override
+    public int compare(Item o1, Item o2) {
+        return Double.compare(o2.getPrice(), o1.getPrice());
+    }
+}
+
+class TypeSorter implements Comparator<Item> {
+    @Override
+    public int compare(Item o1, Item o2) {
+        return o2.getCategory().compareTo(o1.getCategory());
     }
 }
 
